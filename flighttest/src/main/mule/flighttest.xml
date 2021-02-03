@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="3c2c6a57-6c7b-4dd6-ad10-92903ef692dc" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="fdad87db-8857-41c0-bd2c-a6854fdd853e" >
+		<db:my-sql-connection host="34.66.138.19" port="3306" user="root" password="password" database="training" />
+	</db:config>
+	<flow name="GetallFlights" doc:id="f5806f1d-e83f-4d29-a218-35c28f705b1f" >
+		<http:listener doc:name="Listener" doc:id="65b1894a-d5c3-43ea-8c67-e57321d74ec7" path="/flights" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select" doc:id="beca39bc-10b9-40d9-bc6c-b6e4ea511a63" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from american]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="d9fdc584-403d-4511-9deb-9bbd63920844" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="POST" doc:id="b9b5d367-efb9-4d4f-967a-e48fa3a9727d" >
+		<http:listener doc:name="Listener" doc:id="ee1d440b-deea-47f6-893b-8cd0a91f47d5" config-ref="HTTP_Listener_config" path="/flight"/>
+		<db:insert doc:name="Insert" doc:id="aa601b44-36a0-496b-8e19-b0a37b44f5e1" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into american(origin,destination, departureDate,emptySeats,totalSeats) values(:origin,:destination,:date,:empty,:total)
+
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'origin': payload.origin, 'destination': payload.destination, 'date': payload.departureDate,
+'empty': payload.emptySeats,
+'total' : payload.totalSeats
+  }]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="1b90b913-5c22-4f27-83bd-bdb5a82b2a96" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message : "Flights inserted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="GetFlightbyID" doc:id="8c3a0365-6aab-4a44-89d1-e47dfb71d616" >
+		<http:listener doc:name="Listener" doc:id="eca342ae-408c-4780-b38e-5aaf9fea2468" config-ref="HTTP_Listener_config" path="/flights/{ID}"/>
+		<db:select doc:name="Select" doc:id="5c79596f-8d30-44d0-8b04-7b8d8c50e58c" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from american where ID = :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{ 'ID' : attributes.uriParams.ID}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="585a5200-539a-4412-9d51-4fdfc45564d9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="PUT" doc:id="48965e23-a7e8-4753-9a92-ec3026c96f91" >
+		<http:listener doc:name="Listener" doc:id="cade6fd6-08b9-4f39-af12-10309737505c" config-ref="HTTP_Listener_config" path="/flights/{ID}" allowedMethods="PUT"/>
+		<set-variable value="#[attributes.uriParams.ID]" doc:name="ID" doc:id="0c362bdf-ac7a-4dbf-a9de-adc02173621e" variableName="ID" />
+		<set-variable value="#[payload.origin]" doc:name="origin" doc:id="154274da-821e-4be4-8cc1-f1f0f95d810f" variableName="origin" />
+		<set-variable value="#[payload.destionation]" doc:name="destination" doc:id="6c366de6-be23-4978-9509-e4a165fa3618" variableName="destination" />
+		<set-variable value="#[payload.departureDate]" doc:name="departureDate" doc:id="d4f5c55d-5553-4905-9a65-079898bb9416" variableName="departureDate" />
+		<set-variable value="#[payload.emptySeats]" doc:name="emptySeats" doc:id="809f6eb3-833c-4805-b562-04ac5bf36523" variableName="emptySeats" />
+		<set-variable value="#[payload.totalSeats]" doc:name="totalSeats" doc:id="4e477f04-ff7f-41cb-a5cb-ad10d51c9b76" variableName="totalSeats" />
+		<db:select doc:name="Select" doc:id="57ec11eb-4525-4f14-a0da-d51021437f26" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from american where ID = :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#['ID' : attributes.uriParams.ID]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="9c033c36-ebf7-4c2e-a4f6-87f9170f7741" >
+			<when expression="#[sizeOf(payload)&gt;0]">
+				<db:update doc:name="Update" doc:id="5c5822c8-ff5c-40be-a7a6-b7c9f8e7c9bd" config-ref="Database_Config">
+					<db:sql ><![CDATA[update american set origin= :origin, destination= :destination, departureDate= :date, totalSseats= :total, emptySeats= :empty where ID = :ID]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{ 'ID' : attributes.uriParams.ID, 'origin' : vars.origin, 'destination' : vars.destination, 'date' : vars.departureDate,
+	'total' : vars.totalSeats, 'empty' : vars.emptySeats
+}]]]></db:input-parameters>
+				</db:update>
+				<ee:transform doc:name="Transform Message" doc:id="d9391981-fff6-4641-b8b3-5d5b110b0e14" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: " Flight Updated "
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<db:insert doc:name="Insert" doc:id="161e9dd8-f122-4afb-a8ab-3d3a5d8efb4b" config-ref="Database_Config">
+					<db:sql ><![CDATA[insert into american value (:origin,:destination,:date,:empty,:total)
+]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{ 'ID' : attributes.uriParams.ID, 'origin' : vars.origin, 'destination' : vars.destination, 'date' : vars.departureDate,
+	'total' : vars.totalSeats, 'empty' : vars.emptySeats
+}]]]></db:input-parameters>
+				</db:insert>
+				<ee:transform doc:name="Transform Message" doc:id="6cc8a722-8a28-48f2-b396-b600ff88d1d0" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message : "Flight inserted"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="Delete" doc:id="b2325172-47d2-4ac2-9210-7f1c24435d22" >
+		<http:listener doc:name="Listener" doc:id="6dca96b3-c6f6-4422-9d73-1719e2e0bf60" config-ref="HTTP_Listener_config" path="/flight/{ID}"/>
+		<db:select doc:name="Select" doc:id="c78afdfd-a22d-49e2-a844-8dd278264b82" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from american where ID = :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#['ID' : attributes.uriParams.ID]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="90437031-1767-4d8a-aac2-76ce550fea48" >
+			<when expression="#[sizeOf(payload)&gt;0]">
+				<db:delete doc:name="Delete" doc:id="5bd13573-2b54-4175-b805-2354e6f4a2ed" config-ref="Database_Config">
+					<db:sql ><![CDATA[Delete from american where ID = :ID]]></db:sql>
+					<db:input-parameters ><![CDATA[#['ID' : attributes.uriParams.ID]]]></db:input-parameters>
+				</db:delete>
+				<ee:transform doc:name="Transform Message" doc:id="78ff46c0-becd-4542-9b0d-a8bf72febcfc" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message : "Data Deleted"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="abcf715f-af5d-45b6-b607-9ce51246c62a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message : "ID does not exist"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
